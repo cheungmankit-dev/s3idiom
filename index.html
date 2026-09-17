@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中三級中國語文科 - 成語自學系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif; background-color: #f3f4f6; }
+        .tab-btn.active { border-bottom: 4px solid #3b82f6; color: #1d4ed8; font-weight: bold; }
+        .sub-btn.active { background-color: #3b82f6; color: white; }
+        .idiom-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        /* 自訂滾動條 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px;}
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen relative text-gray-800">
+
+    <header class="bg-blue-900 text-white py-6 shadow-md">
+        <div class="max-w-5xl mx-auto px-4">
+            <h1 class="text-3xl font-bold">救恩書院 - 中三級成語自學系統</h1>
+            <p class="mt-2 text-blue-200">救恩書院中文科精心設計 ｜ 結合《重編國語辭典修訂本》2021 典故規範</p>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto mt-8 bg-white rounded-lg shadow-lg overflow-hidden mb-10">
+        <div class="flex border-b bg-gray-50">
+            <button onclick="selectTerm(1)" id="tab-1" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:bg-gray-100 transition text-lg">第一學期</button>
+            <button onclick="selectTerm(2)" id="tab-2" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:bg-gray-100 transition text-lg">第二學期</button>
+            <button onclick="selectTerm(3)" id="tab-3" class="tab-btn flex-1 py-4 text-center text-gray-600 hover:bg-gray-100 transition text-lg">第三學期</button>
+        </div>
+
+        <div class="p-6">
+            <div class="flex flex-wrap gap-3 mb-6" id="mode-selector">
+                <button onclick="selectMode('study')" id="mode-study" class="sub-btn px-5 py-2.5 rounded-md bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white transition font-bold">📖 成語自學區</button>
+                <button onclick="selectMode('test1')" id="mode-test1" class="sub-btn px-5 py-2.5 rounded-md bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white transition font-bold">📝 測一：字詞辨識</button>
+                <button onclick="selectMode('test2')" id="mode-test2" class="sub-btn px-5 py-2.5 rounded-md bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white transition font-bold">📝 測二：成語配對</button>
+                <button onclick="selectMode('test3')" id="mode-test3" class="sub-btn px-5 py-2.5 rounded-md bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white transition font-bold">📝 測三：成語應用</button>
+            </div>
+
+            <div id="content-area" class="min-h-[400px]"></div>
+        </div>
+    </main>
+
+    <div id="idiom-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-red-500 text-3xl font-bold transition">&times;</button>
+            <h2 id="modal-word" class="text-3xl font-extrabold text-blue-800 mb-4 border-b-2 border-blue-200 pb-2"></h2>
+            <div class="space-y-4 text-lg text-gray-800">
+                <p><strong class="text-blue-600">解釋：</strong> <span id="modal-exp"></span></p>
+                <p><strong class="text-blue-600">出處：</strong> <span id="modal-origin" class="text-gray-600 text-base"></span></p>
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-100 mt-4 shadow-inner">
+                    <p><strong class="text-blue-800 block mb-2 text-xl">📖 歷史典故：</strong> <span id="modal-story" class="leading-relaxed"></span></p>
+                </div>
+            </div>
+            <div class="mt-6 text-center">
+                <button onclick="closeModal()" class="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">明白，關閉視窗</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // ⚙️ 張SIR設定區 (請在此貼上結尾為 /exec 的真實網址)
+        // ==========================================
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwMqddZIHdZnJZ4RVG9my8CkiwjRjkVaWOdORVMCp1MlZOBBaHoWKc9QJqQGc73fGkuyw/exec"; 
+        
+        let currentStudent = { className: '', classNo: '', studentName: '' };
+
+        // ==========================================
+        // 📚 中三級 完整資料庫 (正確答案已全面洗牌)
+        // ==========================================
+        const termData = {
+            1: {
+                title: "第一學期",
+                idioms: [
+                    { word: "殊途同歸", exp: "採取的方法雖不同，而得到的結果卻一樣。", origin: "《周易．繫辭下》", story: "「天下同歸而殊塗，一致而百慮。」比喻採取的方法或途徑雖然各不相同，但最終達到的目的或結果卻是完全一致的。" },
+                    { word: "設身處地", exp: "設想自己處在別人的地位或境遇中。", origin: "《禮記．中庸》", story: "指在考慮問題時，能夠將心比心，把自己放在對方的處境中去體會別人的感受，替別人著想。" },
+                    { word: "望塵莫及", exp: "望見前面騎馬的人走過揚起的塵土而不能趕上。比喻遠遠落後。", origin: "《莊子．田子方》", story: "顏淵感嘆孔子的學問深不可測：「夫子奔逸絕塵，而回瞠若乎後矣。」比喻對方的才華或成就極高，自己遠遠落後，連追趕的希望都沒有。" },
+                    { word: "淋漓盡致", exp: "形容文章或說話表達得非常充分、透徹，或做事痛快到了極點。", origin: "明．李清《三垣筆記》", story: "「淋漓」本指液體濕透下滴的樣子，「盡致」達到極點。後形容表現、刻畫或發揮得十分透徹，毫無保留。" },
+                    { word: "窮奢極侈", exp: "形容極端奢侈，過分浪費。", origin: "《後漢書．王符傳》", story: "「窮」、「極」皆為極端；「奢」、「侈」皆指浪費揮霍。形容人為了追求物質享受，浪費財物到了極點。" },
+                    { word: "陳詞濫調", exp: "陳腐而缺乏新意的言詞。", origin: "清．吳趼人《痛史》", story: "指文章或言語陳舊腐俗，反覆套用別人的舊話，毫無新意，令人聽了生厭。" },
+                    { word: "琳瑯滿目", exp: "形容滿眼所見都是珍美的東西。", origin: "南朝宋．劉義慶《世說新語》", story: "有人去拜訪名士王衍，看見他家中盡是才華出眾的名流，不禁感嘆道：「今日之行，觸目見琳瑯珠玉。」後用以形容美好珍貴的事物很多。" },
+                    { word: "顛沛流離", exp: "遭受挫折，生活困苦，四處流浪。", origin: "《詩經．大雅．蕩》", story: "「顛沛」指跌倒，比喻遭受挫折；「流離」指流落離散。形容人在戰亂或災難中失去家園，生活困苦，到處流浪。" },
+                    { word: "虛有其表", exp: "形容空有華麗的外表，卻無實際的內涵。", origin: "唐．鄭處誨《明皇雜錄》", story: "唐玄宗時期的宰相蘇頲容貌魁梧，但有人諷刺他只有外表好看，學識與才能卻平庸無奇，是「虛有其表」。" },
+                    { word: "啼笑皆非", exp: "哭也不是，笑也不是。形容不知如何是好的尷尬局面。", origin: "清．沙張白《再來詩政》", story: "形容發生的事情既令人感到荒謬可笑，又令人感到無奈悲哀，處境極其尷尬，令人哭笑不得。" },
+                    { word: "集思廣益", exp: "集合眾人的智慧，廣泛吸收有益的意見。", origin: "三國．蜀．諸葛亮〈教與軍師長史參軍掾屬〉", story: "諸葛亮在公文中勉勵下屬：「夫參署者，集眾思，廣忠益也。」鼓勵大家多發表意見，集中眾人的智慧來把事情辦得更好。" },
+                    { word: "集腋成裘", exp: "狐狸腋下的皮毛雖小，但聚集起來就能製成皮衣。比喻積少成多。", origin: "《慎子．知忠》", story: "「狐白之裘，蓋非一狐之皮也。」狐狸腋下純白的皮毛非常稀少珍貴，但只要收集足夠的數量，就能縫製成一件珍貴的皮衣。" },
+                    { word: "循規蹈矩", exp: "遵守禮法，不踰越法度。", origin: "宋．朱熹《答方賓王書》", story: "「規」、「矩」原為定方圓的工具，借指行為的準則。形容人行事十分規矩，完全遵守社會的禮法與規定，不敢有絲毫逾越。" },
+                    { word: "循循善誘", exp: "善於循序漸進的誘導別人。", origin: "《論語．子罕》", story: "顏淵讚歎孔子的教學方法：「夫子循循然善誘人，博我以文，約我以禮，欲罷不能。」指善於有步驟地引導、教育別人。" },
+                    { word: "飲水思源", exp: "喝水時思及水源。比喻不忘本。", origin: "北周．庾信《徵調曲》", story: "庾信出使北朝被扣留，作詩抒發思鄉之情：「落其實者思其樹，飲其流者懷其源。」教人喝水時要想到水是從哪裡來的，比喻不忘本。" },
+                    { word: "普天同慶", exp: "天下的人共同慶祝。", origin: "南朝宋．劉義慶《世說新語》", story: "「普天」指全天下。形容國家發生了重大的喜事，天下百姓都一同歡樂慶祝的熱烈場面。" },
+                    { word: "紋風不動", exp: "一點風也不吹。形容絲毫不動。", origin: "清．曹雪芹《紅樓夢》", story: "形容一點動靜也沒有。後也常用來形容人態度極其堅決，無論外界如何勸說或發生什麼事，都毫不動搖。" },
+                    { word: "發憤圖強", exp: "下定決心，努力謀求強盛。", origin: "現代成語", story: "指人遭遇挫折或面對落後局面時，振作精神，下定決心，努力奮鬥，務求使自己或國家變得更加強大。" },
+                    { word: "萬人空巷", exp: "形容擁擠、熱鬧的盛況。", origin: "宋．蘇軾《八月十七日復登望海樓》", story: "本意指家家戶戶的人都奔向同一個地方觀看某事，致使街巷都空了。形容某件事情非常吸引人，盛況空前。" },
+                    { word: "勢如破竹", exp: "比喻作戰或工作節節勝利，毫無阻礙。", origin: "《晉書．杜預傳》", story: "晉國大將杜預討伐東吳時說：「今兵威已振，譬如破竹，數節之後，皆迎刃而解。」比喻軍隊士氣高昂，勢不可擋。" }
+                ],
+                test1: [
+                    { q: "殊＿同歸", options: ["塗", "途", "圖", "徒"], ans: 1, base: "殊途同歸" },
+                    { q: "設身＿地", options: ["觸", "楚", "處", "出"], ans: 2, base: "設身處地" },
+                    { q: "望＿莫及", options: ["晨", "沉", "臣", "塵"], ans: 3, base: "望塵莫及" },
+                    { q: "淋＿盡致", options: ["漓", "離", "黎", "璃"], ans: 0, base: "淋漓盡致" },
+                    { q: "窮奢極＿", options: ["齒", "侈", "恥", "弛"], ans: 1, base: "窮奢極侈" },
+                    { q: "陳詞＿調", options: ["爛", "覽", "濫", "纜"], ans: 2, base: "陳詞濫調" },
+                    { q: "琳＿滿目", options: ["琅", "朗", "郎", "瑯"], ans: 3, base: "琳瑯滿目" },
+                    { q: "顛＿流離", options: ["沛", "配", "佩", "陪"], ans: 0, base: "顛沛流離" },
+                    { q: "虛有其＿", options: ["錶", "表", "婊", "標"], ans: 1, base: "虛有其表" },
+                    { q: "＿笑皆非", options: ["提", "題", "啼", "蹄"], ans: 2, base: "啼笑皆非" },
+                    { q: "集＿廣益", options: ["私", "斯", "撕", "思"], ans: 3, base: "集思廣益" },
+                    { q: "集腋成＿", options: ["裘", "求", "球", "仇"], ans: 0, base: "集腋成裘" },
+                    { q: "循規＿矩", options: ["倒", "蹈", "導", "島"], ans: 1, base: "循規蹈矩" },
+                    { q: "循循善＿", options: ["幼", "又", "誘", "右"], ans: 2, base: "循循善誘" },
+                    { q: "飲水思＿", options: ["原", "圓", "元", "源"], ans: 3, base: "飲水思源" },
+                    { q: "普天同＿", options: ["慶", "罄", "敬", "境"], ans: 0, base: "普天同慶" },
+                    { q: "＿風不動", options: ["文", "紋", "聞", "蚊"], ans: 1, base: "紋風不動" },
+                    { q: "發＿圖強", options: ["奮", "份", "憤", "糞"], ans: 2, base: "發憤圖強" },
+                    { q: "萬人空＿", options: ["港", "相", "項", "巷"], ans: 3, base: "萬人空巷" },
+                    { q: "勢如破＿", options: ["竹", "足", "族", "俗"], ans: 0, base: "勢如破竹" }
+                ],
+                test3: [
+                    { q: "這兩位科學家的研究方法雖然不同，但得出的結論卻是____的。", options: ["望塵莫及", "殊途同歸", "虛有其表", "集思廣益"], ans: 1, base: "殊途同歸" },
+                    { q: "如果大家能____為對方著想，就不會有那麼多的衝突了。", options: ["循規蹈矩", "飲水思源", "設身處地", "發憤圖強"], ans: 2, base: "設身處地" },
+                    { q: "他的英文水平極高，我們班上其他同學都____。", options: ["啼笑皆非", "紋風不動", "普天同慶", "望塵莫及"], ans: 3, base: "望塵莫及" },
+                    { q: "他把這個角色的內心矛盾演繹得____，贏得了全場觀眾的掌聲。", options: ["淋漓盡致", "陳詞濫調", "集腋成裘", "虛有其表"], ans: 0, base: "淋漓盡致" },
+                    { q: "他自從中了彩票後，生活變得____，沒多久就把錢花光了。", options: ["顛沛流離", "窮奢極侈", "萬人空巷", "勢如破竹"], ans: 1, base: "窮奢極侈" },
+                    { q: "這篇文章通篇都是____，缺乏作者自己的獨特見解。", options: ["琳瑯滿目", "集思廣益", "陳詞濫調", "循循善誘"], ans: 2, base: "陳詞濫調" },
+                    { q: "圖書館裡的新書____，同學們看得非常入迷。", options: ["虛有其表", "啼笑皆非", "紋風不動", "琳瑯滿目"], ans: 3, base: "琳瑯滿目" },
+                    { q: "戰爭爆發後，許多百姓被迫離開家園，過著____的生活。", options: ["顛沛流離", "勢如破竹", "萬人空巷", "普天同慶"], ans: 0, base: "顛沛流離" },
+                    { q: "這部手機外觀設計得很漂亮，但經常當機，真是____。", options: ["集腋成裘", "虛有其表", "殊途同歸", "循規蹈矩"], ans: 1, base: "虛有其表" },
+                    { q: "看著小狗穿著不合身的衣服跌跌撞撞，真是令人____。", options: ["飲水思源", "望塵莫及", "啼笑皆非", "淋漓盡致"], ans: 2, base: "啼笑皆非" },
+                    { q: "為了解決這個難題，經理召開會議，希望大家能____。", options: ["設身處地", "陳詞濫調", "窮奢極侈", "集思廣益"], ans: 3, base: "集思廣益" },
+                    { q: "只要全班同學每人捐出一點零用錢，____，就能幫助那位病重的同學。", options: ["集腋成裘", "顛沛流離", "勢如破竹", "普天同慶"], ans: 0, base: "集腋成裘" },
+                    { q: "他從小就是個____的好學生，從來不讓老師操心。", options: ["萬人空巷", "循規蹈矩", "發憤圖強", "紋風不動"], ans: 1, base: "循規蹈矩" },
+                    { q: "在老師的____下，他終於對數學產生了濃厚的興趣。", options: ["啼笑皆非", "虛有其表", "循循善誘", "琳瑯滿目"], ans: 2, base: "循循善誘" },
+                    { q: "我們能夠享有今天的幸福生活，必須____，感謝前人的努力。", options: ["殊途同歸", "陳詞濫調", "集思廣益", "飲水思源"], ans: 3, base: "飲水思源" },
+                    { q: "奧運代表隊凱旋歸來，全城____，熱烈歡迎運動員。", options: ["普天同慶", "顛沛流離", "窮奢極侈", "集腋成裘"], ans: 0, base: "普天同慶" },
+                    { q: "無論別人怎麼嘲笑他，他始終____，堅持自己的信念。", options: ["勢如破竹", "紋風不動", "萬人空巷", "淋漓盡致"], ans: 1, base: "紋風不動" },
+                    { q: "經歷了這次失敗後，他決定____，明年再戰。", options: ["循規蹈矩", "飲水思源", "發憤圖強", "設身處地"], ans: 2, base: "發憤圖強" },
+                    { q: "著名的偶像團體來到商場舉行簽唱會，現場____，擠滿了粉絲。", options: ["望塵莫及", "虛有其表", "集思廣益", "萬人空巷"], ans: 3, base: "萬人空巷" },
+                    { q: "我軍士氣高昂，在戰場上____，很快就攻下了敵人的陣地。", options: ["勢如破竹", "循循善誘", "啼笑皆非", "琳瑯滿目"], ans: 0, base: "勢如破竹" }
+                ]
+            },
+            2: {
+                title: "第二學期",
+                idioms: [
+                    { word: "適得其反", exp: "結果與原先的期望恰好相反。", origin: "清．魏源《陔餘叢考》", story: "本來希望事情能夠有好的發展或達到某個目標，卻因為方法不當，導致最後的結果跟預期的完全相反。" },
+                    { word: "頓開茅塞", exp: "比喻忽然領悟，心思豁然開朗。", origin: "明．吳承恩《三國演義》", story: "「茅塞」比喻思路被茅草堵塞。聽了別人的一席話或經歷某事後，原本堵塞的思路突然打開，一下子明白了其中的道理。" },
+                    { word: "當頭棒喝", exp: "比喻使人猛醒的勸告或警告。", origin: "宋．釋普濟《五燈會元》", story: "原為佛教禪宗的一種教學方法，師父用棒打或大聲呵斥來點醒執迷不悟的弟子。後泛指促使人猛然醒悟的嚴厲警告。" },
+                    { word: "針鋒相對", exp: "比喻雙方言行銳利，互不相讓。", origin: "宋．釋道原《景德傳燈錄》", story: "針尖對著麥芒。形容雙方在觀點、立場或行動上對立激烈，態度尖銳，誰也不肯退讓半步。" },
+                    { word: "過眼雲煙", exp: "比喻事物容易消逝，不留痕跡。", origin: "宋．蘇軾《答任師中家漢公》", story: "就像從眼前飄過的雲彩與煙霧一樣，很快就消散不見了。多用來比喻榮華富貴、功名利祿等事物虛幻無常，轉瞬即逝。" },
+                    { word: "飽經風霜", exp: "比喻經歷過很多艱難困苦。", origin: "清．曹雪芹《紅樓夢》", story: "「風霜」比喻生活中的艱難與困苦。形容一個人一生中經歷了極多的波折與磨難，經驗豐富且顯得歷盡滄桑。" },
+                    { word: "意氣風發", exp: "形容精神振奮，志氣昂揚。", origin: "現代成語", story: "「意氣」指意志和氣概；「風發」指煥發。形容人面對挑戰或取得成就時，精神抖 গৌ，充滿了自信與昂揚的鬥志。" },
+                    { word: "義無反顧", exp: "本著正義勇往直前，絕不退縮。", origin: "《漢書．司馬相如傳》", story: "「反顧」指回頭看。只要確認自己做的事情是正義的、正確的，就勇敢地一直向前走，絕不後悔退縮。" },
+                    { word: "義憤填膺", exp: "胸中充滿因正義而激起的憤怒。", origin: "清．曾樸《官場現形記》", story: "「膺」是指胸膛。形容看到不公不義的事情時，心中充滿了強烈的憤怒，氣得胸膛都要炸開了。" },
+                    { word: "煙消雲散", exp: "比喻事物消失得乾乾淨淨。", origin: "元．鄭廷玉《楚昭公》", story: "像煙霧和雲彩被風吹散一樣。多用來形容疑慮、愁悶、怨恨或某種事物完全消失，不留一點痕跡。" },
+                    { word: "滄海桑田", exp: "比喻世事變化很大。", origin: "晉．葛洪《神仙傳》", story: "仙人麻姑說她曾親眼看見東海三次變成桑田（農田）。後用「滄海桑田」比喻人世間的事物變化極大，令人感嘆。" },
+                    { word: "塞翁失馬", exp: "比喻禍福時常互轉，不能一時定論。", origin: "《淮南子．人間訓》", story: "邊塞一老翁走失了馬，別人安慰他，他說「怎知不是福？」後來馬帶回一匹好馬；他兒子騎馬摔斷腿，卻因此躲過兵役保住性命。比喻壞事也可能變成好事。" },
+                    { word: "隔岸觀火", exp: "比喻對別人的危難不加援手而在旁看熱鬧。", origin: "唐．乾康《投謁齊己》", story: "隔著河岸看對岸失火。比喻在別人遇到危險或災難時，自己採取袖手旁觀的態度，甚至幸災樂禍，不肯伸出援手。" },
+                    { word: "夢寐以求", exp: "睡夢中都在尋找。形容願望非常迫切。", origin: "《詩經．周南．關雎》", story: "「夢寐」指睡眠。形容對某個人或某種事物渴望到了極點，連睡覺做夢的時候都在追求、期盼著它能實現。" },
+                    { word: "熙來攘往", exp: "形容行人來來往往，非常擁擠。", origin: "《史記．貨殖列傳》", story: "「熙熙」、「攘攘」皆為熱鬧擁擠的樣子。形容街道、市場等地方人潮川流不息，非常繁華熱鬧。" },
+                    { word: "爐火純青", exp: "比喻學問、技術、功夫到達純熟完美的境界。", origin: "唐．孫思邈《四言詩》", story: "道家煉丹時，認為爐火的火候到了發出純青色火焰時，丹藥就煉成了。後用來讚美人的技藝、學問達到了最高、最純熟的境界。" },
+                    { word: "輕描淡寫", exp: "形容說話或寫文章時對重要的事情輕輕帶過。", origin: "清．吳趼人《二十年目睹之怪現狀》", story: "原為繪畫的一種技法。後用來比喻說話或寫作時，對於本來應該重點著墨或非常嚴重的問題，故意說得無足輕重，輕輕帶過。" },
+                    { word: "對症下藥", exp: "比喻針對事物問題的癥結，採取適當的處理方法。", origin: "《三國志．魏書．華佗傳》", story: "名醫華佗給兩個病徵相同的病人開了不同的藥，因為他知道兩人發病的根本原因不同。比喻針對具體問題，採取最有效的解決辦法。" },
+                    { word: "暢所欲言", exp: "痛痛快快地把心裡想說的話全都說出來。", origin: "清．李汝珍《鏡花緣》", story: "「暢」是盡情、痛快。形容在會議或交談中，毫無顧忌，盡情地發表自己的觀點和意見。" },
+                    { word: "與世長辭", exp: "指人去世。", origin: "明．吳承恩《三國演義》", story: "「長辭」是指永遠告別。這是對人死亡的一種委婉、莊重的說法，表示永遠離開了這個世界。" }
+                ],
+                test1: [
+                    { q: "適得其＿", options: ["返", "反", "犯", "泛"], ans: 1, base: "適得其反" },
+                    { q: "頓開＿塞", options: ["毛", "矛", "茅", "卯"], ans: 2, base: "頓開茅塞" },
+                    { q: "當頭棒＿", options: ["嚇", "渴", "褐", "喝"], ans: 3, base: "當頭棒喝" },
+                    { q: "針鋒相＿", options: ["對", "隊", "兌", "退"], ans: 0, base: "針鋒相對" },
+                    { q: "過眼雲＿", options: ["淵", "煙", "淹", "燕"], ans: 1, base: "過眼雲煙" },
+                    { q: "飽經風＿", options: ["雙", "箱", "霜", "傷"], ans: 2, base: "飽經風霜" },
+                    { q: "意氣風＿", options: ["法", "伐", "乏", "發"], ans: 3, base: "意氣風發" },
+                    { q: "義無反＿", options: ["顧", "固", "故", "孤"], ans: 0, base: "義無反顧" },
+                    { q: "義憤填＿", options: ["鷹", "膺", "英", "櫻"], ans: 1, base: "義憤填膺" },
+                    { q: "煙消雲＿", options: ["傘", "閃", "散", "山"], ans: 2, base: "煙消雲散" },
+                    { q: "滄海桑＿", options: ["填", "甜", "天", "田"], ans: 3, base: "滄海桑田" },
+                    { q: "塞翁失＿", options: ["馬", "碼", "瑪", "媽"], ans: 0, base: "塞翁失馬" },
+                    { q: "隔岸觀＿", options: ["伙", "火", "禍", "夥"], ans: 1, base: "隔岸觀火" },
+                    { q: "夢＿以求", options: ["媚", "昧", "寐", "味"], ans: 2, base: "夢寐以求" },
+                    { q: "熙來＿往", options: ["壤", "嚷", "讓", "攘"], ans: 3, base: "熙來攘往" },
+                    { q: "爐火純＿", options: ["青", "清", "輕", "傾"], ans: 0, base: "爐火純青" },
+                    { q: "輕＿淡寫", options: ["瞄", "描", "貓", "茅"], ans: 1, base: "輕描淡寫" },
+                    { q: "對＿下藥", options: ["證", "正", "症", "政"], ans: 2, base: "對症下藥" },
+                    { q: "暢所欲＿", options: ["炎", "延", "顏", "言"], ans: 3, base: "暢所欲言" },
+                    { q: "與世長＿", options: ["辭", "詞", "慈", "池"], ans: 0, base: "與世長辭" }
+                ],
+                test3: [
+                    { q: "原本想嚴格管教孩子讓他進步，沒想到方法不對，反而____，讓他更加反叛。", options: ["頓開茅塞", "適得其反", "意氣風發", "夢寐以求"], ans: 1, base: "適得其反" },
+                    { q: "聽了老師的詳細解說，我____，終於明白了這道數學題的解法。", options: ["過眼雲煙", "隔岸觀火", "頓開茅塞", "與世長辭"], ans: 2, base: "頓開茅塞" },
+                    { q: "這場意外對他來說有如____，讓他徹底醒悟，不再沉迷賭博。", options: ["針鋒相對", "滄海桑田", "熙來攘往", "當頭棒喝"], ans: 3, base: "當頭棒喝" },
+                    { q: "在辯論比賽中，雙方代表____，互不相讓，場面非常激烈。", options: ["針鋒相對", "飽經風霜", "爐火純青", "對症下藥"], ans: 0, base: "針鋒相對" },
+                    { q: "對他而言，過去的榮華富貴都不過是____，現在最重要的是家人的健康。", options: ["塞翁失馬", "過眼雲煙", "暢所欲言", "義無反顧"], ans: 1, base: "過眼雲煙" },
+                    { q: "這位老爺爺臉上的皺紋，顯示他是一位____的人。", options: ["意氣風發", "輕描淡寫", "飽經風霜", "煙消雲散"], ans: 2, base: "飽經風霜" },
+                    { q: "畢業典禮上，同學們個個____，對未來的挑戰充滿信心。", options: ["隔岸觀火", "與世長辭", "適得其反", "意氣風發"], ans: 3, base: "意氣風發" },
+                    { q: "為了追求理想，他____地辭去了高薪工作，決定自己創業。", options: ["義無反顧", "夢寐以求", "頓開茅塞", "過眼雲煙"], ans: 0, base: "義無反顧" },
+                    { q: "看到新聞裡有無辜市民受傷，大家都感到____，要求警方嚴懲凶手。", options: ["熙來攘往", "義憤填膺", "針鋒相對", "塞翁失馬"], ans: 1, base: "義憤填膺" },
+                    { q: "當誤會解釋清楚後，他們兩人之間的不快立刻____了。", options: ["爐火純青", "當頭棒喝", "煙消雲散", "飽經風霜"], ans: 2, base: "煙消雲散" },
+                    { q: "短短十年間，這個小漁村已經發展成現代化城市，真是____啊！", options: ["對症下藥", "意氣風發", "輕描淡寫", "滄海桑田"], ans: 3, base: "滄海桑田" },
+                    { q: "這次比賽雖然輸了，但也讓你認清了自己的弱點，正所謂____，下次一定會更好。", options: ["塞翁失馬", "暢所欲言", "義無反顧", "與世長辭"], ans: 0, base: "塞翁失馬" },
+                    { q: "朋友有難，我們應該挺身而出，怎麼可以____呢？", options: ["義憤填膺", "隔岸觀火", "適得其反", "頓開茅塞"], ans: 1, base: "隔岸觀火" },
+                    { q: "能考上這所世界頂尖的大學，是他____的願望。", options: ["煙消雲散", "針鋒相對", "夢寐以求", "過眼雲煙"], ans: 2, base: "夢寐以求" },
+                    { q: "假日的旺角街頭____，到處都是逛街購物的市民。", options: ["飽經風霜", "滄海桑田", "當頭棒喝", "熙來攘往"], ans: 3, base: "熙來攘往" },
+                    { q: "他的廚藝已經達到了____的境界，隨便煮一道菜都令人回味無窮。", options: ["爐火純青", "隔岸觀火", "塞翁失馬", "意氣風發"], ans: 0, base: "爐火純青" },
+                    { q: "他對自己犯下的大錯竟然____，似乎一點也不覺得內疚。", options: ["義無反顧", "輕描淡寫", "夢寐以求", "暢所欲言"], ans: 1, base: "輕描淡寫" },
+                    { q: "處理學生的行為問題，必須先了解背後的原因，才能____。", options: ["熙來攘往", "義憤填膺", "對症下藥", "適得其反"], ans: 2, base: "對症下藥" },
+                    { q: "這次班會旨在收集意見，請大家放下顧慮，____。", options: ["爐火純青", "煙消雲散", "頓開茅塞", "暢所欲言"], ans: 3, base: "暢所欲言" },
+                    { q: "這位對社會貢獻良多的老校長，於昨晚安詳地____，令人惋惜。", options: ["與世長辭", "輕描淡寫", "過眼雲煙", "滄海桑田"], ans: 0, base: "與世長辭" }
+                ]
+            },
+            3: {
+                title: "第三學期",
+                idioms: [
+                    { word: "語重心長", exp: "言辭誠懇，情意深長。", origin: "清．洛日生《海國英雄記》", story: "形容長輩、老師或朋友在勸告或指導別人時，言語非常真誠懇切，充滿了深厚的關愛與期望。" },
+                    { word: "旗鼓相當", exp: "比喻雙方勢均力敵。", origin: "《後漢書．隗囂傳》", story: "古時作戰，擊鼓進軍，建旗為號。兩軍的軍旗與戰鼓氣勢不相上下，比喻比賽或競爭中雙方的實力非常接近，難分勝負。" },
+                    { word: "慷慨解囊", exp: "毫不吝嗇地拿出錢財幫助別人。", origin: "清．吳趼人《二十年目睹之怪現狀》", story: "「慷慨」指大方；「囊」是錢袋。形容人非常有同情心和正義感，在別人遇到困難時，毫不猶豫地捐出金錢來援助。" },
+                    { word: "滴水穿石", exp: "比喻有志者事竟成，只要努力不懈就能成功。", origin: "宋．羅大經《鶴林玉露》", story: "水滴雖然微小，但只要日積月累地滴在同一塊石頭上，最終也能把石頭滴穿。比喻做事情只要堅持不懈，再大的困難也能克服。" },
+                    { word: "熱淚盈眶", exp: "形容非常感動或激動。", origin: "現代成語", story: "「盈眶」指充滿眼眶。形容人在聽到感人的故事、見到久別的親人，或獲得巨大成功時，激動得眼淚充滿了眼眶。" },
+                    { word: "敷衍塞責", exp: "做事不負責任，應付了事。", origin: "清．張集馨《道咸宦海見聞錄》", story: "「敷衍」指馬虎應付；「塞責」指搪塞責任。形容人對待工作或任務毫無熱誠，隨隨便便做完，只為了向上面交差。" },
+                    { word: "鴉雀無聲", exp: "形容非常安靜。", origin: "宋．釋道原《景德傳燈錄》", story: "連烏鴉和麻雀的叫聲都沒有。形容現場極其安靜，一點聲音也聽不到，多用來形容人群在等待或受震懾時的寂靜。" },
+                    { word: "暴殄天物", exp: "比喻糟蹋物品，不知愛惜。", origin: "《尚書．武成》", story: "「殄」是滅絕；「天物」指大自然賜予的物產。原指殘害滅絕自然界的生物，後泛指任意浪費、糟蹋糧食或物品。" },
+                    { word: "銷聲匿跡", exp: "形容隱藏起來或不公開出現。", origin: "宋．孫光憲《北夢瑣言》", story: "「銷」是消除；「匿」是隱藏。指不再發出聲音，也不暴露行蹤。形容人或事物退出社會舞台，完全隱蔽起來。" },
+                    { word: "鋒芒畢露", exp: "比喻人好表現自己，愛銳氣外露。", origin: "現代成語", story: "刀劍的尖端和邊刃全都露了出來。比喻人的才華、銳氣完全顯露在外，不懂得謙虛收斂，容易招惹別人的嫉妒或反感。" },
+                    { word: "廢寢忘食", exp: "形容專心努力工作或學習。", origin: "《論語．述而》", story: "孔子形容自己發憤學習時：「發憤忘食，樂以忘憂。」後演變為「廢寢忘食」，形容人為了做某件事專心到了極點，連睡覺和吃飯都忘了。" },
+                    { word: "潛移默化", exp: "人的思想、性格受環境影響而不知不覺發生變化。", origin: "北齊．顏之推《顏氏家訓》", story: "「潛」是暗中。指人的思想、性格或習慣，在周圍環境或他人的長期薰陶下，不知不覺、默默地發生了改變。" },
+                    { word: "潰不成軍", exp: "軍隊被打得七零八落，潰敗逃散。", origin: "現代成語", story: "軍隊遭到極其沉重的打擊，士兵四處逃散，已經無法維持完整的軍隊編制。形容在比賽或鬥爭中遭到徹底的慘敗。" },
+                    { word: "推己及人", exp: "將心比心，設身處地為別人著想。", origin: "《論語．衛靈公》", story: "孔子提倡的「恕」道，即「己所不欲，勿施於人」。用自己的心意去推想別人的心意，體會別人的感受，設身處地為他人著想。" },
+                    { word: "融會貫通", exp: "把各方面的知識或道理融合貫穿，獲得全面透徹的理解。", origin: "宋．朱熹《朱子語類》", story: "「融會」指融合；「貫通」指貫穿打通。形容在學習時能將不同領域的知識結合起來，舉一反三，達到徹底明白的境界。" },
+                    { word: "頭昏腦脹", exp: "形容頭腦暈眩發熱。", origin: "清．李寶嘉《官場現形記》", story: "因為疲勞、生病或事情太繁雜，導致頭部感到暈眩、發熱發脹，無法清晰思考。" },
+                    { word: "學步邯鄲", exp: "比喻模仿別人不到家，反而把自己的本領也忘了。", origin: "《莊子．秋水》", story: "戰國時燕國有人去趙國首都邯鄲學當地人走路的姿勢。結果不但沒學好，連自己原本走路的方法都忘了，最後只好爬著回家。" },
+                    { word: "優柔寡斷", exp: "行事猶豫不決，不能當機立斷。", origin: "《韓非子．亡徵》", story: "「優柔」指猶豫不決；「寡斷」指缺乏決斷力。形容人性格軟弱，做決定時總是顧慮重重，遲遲無法下定決心。" },
+                    { word: "鍥而不捨", exp: "比喻堅持到底，奮勉不懈。", origin: "《荀子．勸學》", story: "「鍥」是雕刻。荀子說：「鍥而舍之，朽木不折；鍥而不舍，金石可鏤。」比喻只要有恆心，堅持不懈地努力，連金石也能雕刻成功。" },
+                    { word: "躊躇滿志", exp: "形容對自己取得的成就非常得意。", origin: "《莊子．養生主》", story: "庖丁為文惠君解牛後，提著刀站立，環顧四周，顯得非常從容自得（躊躇滿志）。形容人因為實現了心願而感到十分滿足和得意。" }
+                ],
+                test1: [
+                    { q: "語重＿長", options: ["星", "心", "新", "薪"], ans: 1, base: "語重心長" },
+                    { q: "旗鼓相＿", options: ["擋", "黨", "當", "襠"], ans: 2, base: "旗鼓相當" },
+                    { q: "慷慨解＿", options: ["郎", "朗", "浪", "囊"], ans: 3, base: "慷慨解囊" },
+                    { q: "滴水穿＿", options: ["石", "時", "實", "拾"], ans: 0, base: "滴水穿石" },
+                    { q: "熱淚盈＿", options: ["框", "眶", "匡", "筐"], ans: 1, base: "熱淚盈眶" },
+                    { q: "敷衍＿責", options: ["賽", "曬", "塞", "色"], ans: 2, base: "敷衍塞責" },
+                    { q: "鴉＿無聲", options: ["鵲", "卻", "確", "雀"], ans: 3, base: "鴉雀無聲" },
+                    { q: "暴＿天物", options: ["殄", "腆", "舔", "填"], ans: 0, base: "暴殄天物" },
+                    { q: "銷聲＿跡", options: ["逆", "匿", "泥", "溺"], ans: 1, base: "銷聲匿跡" },
+                    { q: "鋒＿畢露", options: ["忙", "盲", "芒", "茫"], ans: 2, base: "鋒芒畢露" },
+                    { q: "廢寢＿食", options: ["妄", "亡", "網", "忘"], ans: 3, base: "廢寢忘食" },
+                    { q: "潛移＿化", options: ["默", "墨", "陌", "漠"], ans: 0, base: "潛移默化" },
+                    { q: "＿不成軍", options: ["愧", "潰", "饋", "貴"], ans: 1, base: "潰不成軍" },
+                    { q: "推己＿人", options: ["級", "急", "及", "極"], ans: 2, base: "推己及人" },
+                    { q: "融會貫＿", options: ["同", "童", "痛", "通"], ans: 3, base: "融會貫通" },
+                    { q: "頭昏腦＿", options: ["脹", "漲", "帳", "仗"], ans: 0, base: "頭昏腦脹" },
+                    { q: "學步邯＿", options: ["單", "鄲", "丹", "擔"], ans: 1, base: "學步邯鄲" },
+                    { q: "優柔寡＿", options: ["段", "鍛", "斷", "短"], ans: 2, base: "優柔寡斷" },
+                    { q: "鍥而不＿", options: ["舍", "奢", "赦", "捨"], ans: 3, base: "鍥而不捨" },
+                    { q: "躊躇滿＿", options: ["志", "至", "致", "智"], ans: 0, base: "躊躇滿志" }
+                ],
+                test3: [
+                    { q: "校長在畢業典禮上____地勉勵我們，要勇敢追逐自己的夢想。", options: ["旗鼓相當", "語重心長", "廢寢忘食", "學步邯鄲"], ans: 1, base: "語重心長" },
+                    { q: "這兩支球隊的實力____，直到最後一分鐘才分出勝負。", options: ["潰不成軍", "融會貫通", "旗鼓相當", "鋒芒畢露"], ans: 2, base: "旗鼓相當" },
+                    { q: "得悉災區急需救援物資，許多市民紛紛____，捐出善款。", options: ["敷衍塞責", "暴殄天物", "推己及人", "慷慨解囊"], ans: 3, base: "慷慨解囊" },
+                    { q: "學習語文必須要有____的精神，每天累積才能見到成效。", options: ["滴水穿石", "頭昏腦脹", "優柔寡斷", "躊躇滿志"], ans: 0, base: "滴水穿石" },
+                    { q: "當他接過奧運金牌的那一刻，激動得____，無法言語。", options: ["鴉雀無聲", "熱淚盈眶", "銷聲匿跡", "潛移默化"], ans: 1, base: "熱淚盈眶" },
+                    { q: "他交上來的這份報告錯漏百出，明顯是____，沒有認真對待。", options: ["鍥而不捨", "慷慨解囊", "敷衍塞責", "語重心長"], ans: 2, base: "敷衍塞責" },
+                    { q: "訓導主任走進課室，原本吵鬧的同學頓時安靜下來，全場____。", options: ["旗鼓相當", "融會貫通", "鋒芒畢露", "鴉雀無聲"], ans: 3, base: "鴉雀無聲" },
+                    { q: "把這麼美味的食物直接扔進垃圾桶，簡直是____！", options: ["暴殄天物", "學步邯鄲", "推己及人", "滴水穿石"], ans: 0, base: "暴殄天物" },
+                    { q: "這位曾經紅極一時的歌手，近年來已經在娛樂圈____了。", options: ["熱淚盈眶", "銷聲匿跡", "潰不成軍", "躊躇滿志"], ans: 1, base: "銷聲匿跡" },
+                    { q: "年輕人有才華是好事，但如果過於____，有時反而會招來非議。", options: ["優柔寡斷", "廢寢忘食", "鋒芒畢露", "語重心長"], ans: 2, base: "鋒芒畢露" },
+                    { q: "為了準備即將到來的公開試，他____地溫習，連周末也不休息。", options: ["敷衍塞責", "慷慨解囊", "鴉雀無聲", "廢寢忘食"], ans: 3, base: "廢寢忘食" },
+                    { q: "父母的言行舉止，對子女的成長起著____的作用。", options: ["潛移默化", "暴殄天物", "旗鼓相當", "銷聲匿跡"], ans: 0, base: "潛移默化" },
+                    { q: "敵軍遭到我方連夜突襲，被打得____，丟盔棄甲而逃。", options: ["滴水穿石", "潰不成軍", "融會貫通", "鍥而不捨"], ans: 1, base: "潰不成軍" },
+                    { q: "我們在社會上為人處事，應該懂得____，多替別人的難處著想。", options: ["鋒芒畢露", "學步邯鄲", "推己及人", "頭昏腦脹"], ans: 2, base: "推己及人" },
+                    { q: "只有把課本的知識與生活經驗____，才算是真正的學習。", options: ["優柔寡斷", "潛移默化", "熱淚盈眶", "融會貫通"], ans: 3, base: "融會貫通" },
+                    { q: "這幾天連續熬夜趕工，讓我感到____，無法集中精神。", options: ["頭昏腦脹", "躊躇滿志", "廢寢忘食", "潰不成軍"], ans: 0, base: "頭昏腦脹" },
+                    { q: "寫作要有自己的風格，盲目抄襲別人的手法，只會落得____的下場。", options: ["推己及人", "學步邯鄲", "暴殄天物", "敷衍塞責"], ans: 1, base: "學步邯鄲" },
+                    { q: "身為團隊的領導者，遇到突發事件時必須果斷，絕不能____。", options: ["鍥而不捨", "融會貫通", "優柔寡斷", "慷慨解囊"], ans: 2, base: "優柔寡斷" },
+                    { q: "科學研究的道路充滿困難，只有____的人，才能抵達成功的彼岸。", options: ["優柔寡斷", "學步邯鄲", "頭昏腦脹", "鍥而不捨"], ans: 3, base: "鍥而不捨" },
+                    { q: "拿著剛收到的名牌大學錄取通知書，他____地向家人報喜。", options: ["躊躇滿志", "銷聲匿跡", "鴉雀無聲", "潛移默化"], ans: 0, base: "躊躇滿志" }
+                ]
+            }
+        };
+
+        let currentTerm = 1;
+        let currentMode = 'study';
+        let activeTestQuestions = [];
+
+        // ==========================================
+        // 核心邏輯
+        // ==========================================
+        
+        // 陣列洗牌函數
+        function shuffleArray(array) {
+            let curId = array.length;
+            while (0 !== curId) {
+                let randId = Math.floor(Math.random() * curId);
+                curId -= 1;
+                let tmp = array[curId];
+                array[curId] = array[randId];
+                array[randId] = tmp;
+            }
+            return array;
+        }
+
+        // 開關典故視窗
+        function openModal(termIdx, idiomIdx) {
+            const item = termData[termIdx].idioms[idiomIdx];
+            document.getElementById('modal-word').innerText = item.word;
+            document.getElementById('modal-exp').innerText = item.exp;
+            document.getElementById('modal-origin').innerText = item.origin;
+            document.getElementById('modal-story').innerText = item.story;
+            document.getElementById('idiom-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('idiom-modal').classList.add('hidden');
+        }
+
+        // 切換學期
+        function selectTerm(term) {
+            currentTerm = term;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${term}`).classList.add('active');
+            renderContent();
+        }
+
+        // 切換模式
+        function selectMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.sub-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`mode-${mode}`).classList.add('active');
+            renderContent();
+        }
+
+        // 渲染主要畫面
+        function renderContent() {
+            const area = document.getElementById('content-area');
+            area.innerHTML = ''; 
+            const data = termData[currentTerm];
+
+            // 模式：自學
+            if (currentMode === 'study') {
+                let html = `<h2 class="text-2xl font-bold mb-4 text-blue-900">${data.title} - 成語自學區 <span class="text-base text-gray-500 font-normal">(點擊卡片可放大看典故)</span></h2><div class="grid md:grid-cols-2 gap-6">`;
+                data.idioms.forEach((item, index) => {
+                    html += `
+                    <div onclick="openModal(${currentTerm}, ${index})" class="idiom-card bg-blue-50 border-l-4 border-blue-600 p-5 rounded shadow-sm flex flex-col justify-between cursor-pointer transition">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 flex items-center justify-between">
+                                ${item.word}
+                                <span class="text-xs bg-blue-200 text-blue-900 px-2 py-1 rounded font-normal">🔍 點我看典故</span>
+                            </h3>
+                            <p class="text-gray-700 mt-2 line-clamp-2"><strong>解釋：</strong>${item.exp}</p>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+                area.innerHTML = html;
+            
+            // 模式：測驗
+            } else if (currentMode === 'test1' || currentMode === 'test2' || currentMode === 'test3') {
+                let pool = [];
+                let title = "";
+                
+                if (currentMode === 'test1') {
+                    pool = data.test1;
+                    title = "測驗一：字詞辨識 (選出缺少的正確字詞)";
+                } else if (currentMode === 'test3') {
+                    pool = data.test3;
+                    title = "測驗三：成語應用 (選出適合句子的成語)";
+                } else if (currentMode === 'test2') {
+                    // 測驗二：動態生成成語配對題庫
+                    title = "測驗二：成語配對 (根據解釋選出正確的成語)";
+                    let allIdioms = data.idioms;
+                    pool = allIdioms.map(item => {
+                        let wrongOptions = allIdioms.filter(x => x.word !== item.word);
+                        wrongOptions = shuffleArray([...wrongOptions]).slice(0, 3).map(x => x.word);
+                        let options = [item.word, ...wrongOptions];
+                        options = shuffleArray(options);
+                        return {
+                            q: `請問「<span class="text-blue-800 font-bold">${item.exp}</span>」是以下哪一個成語的解釋？`,
+                            options: options,
+                            ans: options.indexOf(item.word),
+                            base: item.word
+                        };
+                    });
+                }
+
+                if(pool.length === 0) {
+                    area.innerHTML = `<p class="text-gray-500 text-center py-10">此學期的測驗題目尚待擴充。</p>`;
+                    return;
+                }
+
+                // 去重複抽題機制：確保10題對應10個不同的成語 (base 不重複)
+                let shuffledPool = shuffleArray([...pool]);
+                activeTestQuestions = [];
+                let usedBase = new Set();
+                
+                for (let t of shuffledPool) {
+                    if (!usedBase.has(t.base)) {
+                        usedBase.add(t.base);
+                        activeTestQuestions.push(t);
+                    }
+                    if (activeTestQuestions.length === 10) break;
+                }
+                
+                if (activeTestQuestions.length < 10) {
+                    for (let t of shuffledPool) {
+                        if (activeTestQuestions.length === 10) break;
+                        if (!activeTestQuestions.includes(t)) activeTestQuestions.push(t);
+                    }
+                }
+                
+                let html = `<h2 class="text-2xl font-bold mb-4 text-blue-900">${data.title} - ${title}</h2>`;
+                html += `<p class="text-gray-600 mb-6 bg-yellow-50 p-3 rounded border border-yellow-200 shadow-sm text-sm">💡 系統提示：題目已從題庫隨機抽出，每次測驗皆不相同，且保證10題考核10個不同的成語。滿分為 10 分。</p>`;
+                
+                // 表單開始
+                html += `<form id="quiz-form" onsubmit="submitQuiz(event)" class="space-y-6">`;
+                
+                // 學生資料輸入區塊
+                html += `
+                <div class="bg-indigo-50 border border-indigo-200 p-5 rounded-lg mb-6 shadow-sm">
+                    <h3 class="font-bold text-indigo-800 mb-3 flex items-center">👤 學生資料 (交卷前必填)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="student-class" placeholder="班別 (例: 3A)" class="p-2.5 rounded border focus:ring-2 focus:ring-indigo-300 outline-none" value="${currentStudent.className}" required>
+                        <input type="number" id="student-no" placeholder="學號 (例: 01)" class="p-2.5 rounded border focus:ring-2 focus:ring-indigo-300 outline-none" value="${currentStudent.classNo}" required>
+                        <input type="text" id="student-name" placeholder="姓名 (例: Chan Tai Man)" class="p-2.5 rounded border focus:ring-2 focus:ring-indigo-300 outline-none" value="${currentStudent.studentName}" required>
+                    </div>
+                </div>`;
+
+                // 題目區塊
+                activeTestQuestions.forEach((t, index) => {
+                    html += `
+                    <div class="bg-gray-50 p-5 rounded shadow-sm border border-gray-100 hover:border-blue-300 transition">
+                        <p class="text-lg mb-4 leading-relaxed"><strong>${index + 1}.</strong> ${t.q}</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
+                    t.options.forEach((opt, optIdx) => {
+                        html += `
+                            <label class="flex items-center p-3 bg-white border rounded shadow-sm cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition">
+                                <input type="radio" name="q${index}" value="${optIdx}" class="mr-3 w-4 h-4 text-blue-600 focus:ring-blue-500" required>
+                                <span class="font-medium text-gray-800">${opt}</span>
+                            </label>`;
+                    });
+                    html += `</div></div>`;
+                });
+                
+                html += `<button type="submit" id="submit-test-btn" class="w-full bg-blue-700 text-white font-bold py-4 rounded-lg shadow-md hover:bg-blue-800 transition transform hover:scale-[1.01] text-lg mt-4">交卷並看結果！</button>`;
+                html += `</form><div id="result-area" class="mt-8 mb-6 text-center"></div>`;
+                area.innerHTML = html;
+            }
+        }
+
+        // 交卷邏輯與傳送成績
+        function submitQuiz(e) {
+            e.preventDefault();
+            
+            // 記錄學生資料
+            currentStudent.className = document.getElementById('student-class').value;
+            currentStudent.classNo = document.getElementById('student-no').value;
+            currentStudent.studentName = document.getElementById('student-name').value;
+
+            const form = new FormData(e.target);
+            let score = 0;
+            let resultDetailsHtml = '<div class="mt-6 space-y-4 text-left text-base font-normal">';
+
+            // 對答案
+            activeTestQuestions.forEach((t, index) => {
+                const userAnswer = parseInt(form.get(`q${index}`));
+                const isCorrect = (userAnswer === t.ans);
+                
+                if (isCorrect) score += 1; 
+                
+                let correctText = t.options[t.ans];
+                let userText = isNaN(userAnswer) ? "未作答" : t.options[userAnswer];
+                let cardClass = isCorrect ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300";
+                
+                resultDetailsHtml += `
+                <div class="p-5 rounded-lg border-2 ${cardClass}">
+                    <p class="text-gray-800 mb-3 font-medium">${index + 1}. ${t.q}</p>
+                    <div class="flex flex-col sm:flex-row sm:gap-6 gap-2">
+                        <p class="text-gray-700">你的答案：<span class="font-bold text-lg ${isCorrect ? 'text-green-700' : 'text-red-600 line-through'}">${userText}</span></p>
+                        ${!isCorrect ? `<p class="text-gray-700">正確答案：<span class="font-bold text-lg text-green-700">${correctText}</span></p>` : ''}
+                    </div>
+                </div>`;
+            });
+            resultDetailsHtml += '</div>';
+
+            // 準備傳送給 GAS 的資料
+            const testNames = { 'test1': '字詞辨識', 'test2': '成語配對', 'test3': '成語應用' };
+            const payload = {
+                className: currentStudent.className,
+                classNo: currentStudent.classNo,
+                studentName: currentStudent.studentName,
+                term: `中三級 ${currentTerm} 學期`,
+                testType: testNames[currentMode],
+                score: score,
+                maxScore: 10
+            };
+
+            // 介面鎖定
+            const submitBtn = document.getElementById('submit-test-btn');
+            submitBtn.innerText = "成績傳送中，請稍候...";
+            submitBtn.disabled = true;
+            submitBtn.classList.replace("bg-blue-700", "bg-gray-400");
+            submitBtn.classList.replace("hover:bg-blue-800", "hover:bg-gray-400");
+            document.querySelectorAll('input[type="radio"], input[type="text"], input[type="number"]').forEach(input => input.disabled = true);
+
+            // 定義顯示最終結果的函數
+            const showFinalResult = (fetchMessage = "") => {
+                const resultArea = document.getElementById('result-area');
+                let scoreMessage = '';
+                
+                if(score === 10) {
+                    scoreMessage = `<div class="text-4xl font-extrabold text-green-600 mb-2">太棒了！你的分數是 ${score} / 10 滿分！🎉</div>`;
+                } else if(score >= 6) {
+                    scoreMessage = `<div class="text-4xl font-extrabold text-blue-600 mb-2">表現不錯！你的分數是 ${score} / 10。👍</div>`;
+                } else {
+                    scoreMessage = `<div class="text-4xl font-extrabold text-red-600 mb-2">你的分數是 ${score} / 10。💪</div>`;
+                }
+                
+                let fetchWarningHtml = fetchMessage ? `<p class="text-sm text-yellow-600 bg-yellow-100 p-2 rounded mb-4 inline-block">${fetchMessage}</p>` : '';
+
+                let retryBtnHtml = `
+                    <div class="mt-6 mb-8">
+                        <button onclick="renderContent()" class="w-full md:w-1/2 mx-auto px-8 bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 shadow-lg transition transform hover:-translate-y-1 text-lg flex justify-center items-center gap-2">
+                            <span>🔄 重新測驗 (抽取全新題目)</span>
+                        </button>
+                        <p class="text-gray-500 text-sm mt-3">覺得這套題目太簡單？按上面按鈕挑戰新的隨機組合！</p>
+                    </div>
+                `;
+
+                submitBtn.style.display = 'none';
+                resultArea.innerHTML = scoreMessage + fetchWarningHtml + retryBtnHtml + `<h3 class="text-gray-600 mt-6 font-bold text-xl border-b pb-2 text-left">📝 對錯詳情分析</h3>` + resultDetailsHtml;
+                resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+
+            // 執行 Fetch 發送數據
+            if (GAS_URL === "在此處貼上你的_GOOGLE_APPS_SCRIPT_網址" || GAS_URL === "") {
+                setTimeout(() => {
+                    showFinalResult("⚠️ 提示：因為張SIR尚未設定真實的 GAS 網址，本次成績未傳送至後台，但你仍可查看結果！");
+                }, 800); 
+            } else {
+                fetch(GAS_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    showFinalResult(); 
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    showFinalResult("⚠️ 提示：成績傳送至後台失敗，請檢查網絡連線或 GAS 網址部署權限。");
+                });
+            }
+        }
+
+        // 初始化載入
+        selectTerm(1);
+        selectMode('study');
+    </script>
+</body>
+</html>
